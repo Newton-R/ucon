@@ -16,14 +16,18 @@ type InputProps = {
   icon?: IconSvgObject;
   placeholder?: string;
   label?: string;
+  value?: string;
   secureTextEntry?: boolean;
+  onChangeText?: (text: string) => void;
 };
 
 export default function Input({
   icon: Icon,
   label,
+  value,
   placeholder,
   secureTextEntry,
+  onChangeText,
 }: InputProps) {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
@@ -41,6 +45,12 @@ export default function Input({
 
         <TextInput
           placeholder={placeholder}
+          value={value}
+          onChangeText={(text) => {
+            if (onChangeText) {
+              onChangeText(text);
+            }
+          }}
           placeholderTextColor={theme.text_muted}
           secureTextEntry={secureTextEntry && !viewingPass}
           style={[styles.input, { color: theme.text_primary }]}

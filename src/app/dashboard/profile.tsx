@@ -6,6 +6,7 @@ import ThemedText from "@/components/themed/ThemedText";
 import ThemedView from "@/components/themed/ThemedView";
 import { Colors, raduis, StateColors } from "@/constants/Colors";
 import { TextSize } from "@/constants/Template";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Bell,
   ChevronRight,
@@ -26,6 +27,7 @@ import {
 } from "react-native";
 
 export default function ProfilePage() {
+  const { signOut, user } = useAuth();
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
   return (
@@ -39,7 +41,7 @@ export default function ProfilePage() {
         </View>
         <View style={styles.info}>
           <ThemedText style={{ fontSize: TextSize["2xl"] }}>
-            Newton Raul
+            {user?.user_metadata.full_name}
           </ThemedText>
           <ThemedText variant="secondary" style={{ fontSize: TextSize.sm }}>
             Software Engineering student
@@ -100,7 +102,7 @@ export default function ProfilePage() {
         <MenuLink icon={Moon} label="Appearance" />
         <MenuLink icon={Dollar01FreeIcons} label="Currency" />
         <MenuLink icon={CircleAlert} label="Support" />
-        <Pressable style={styles.logout_btn}>
+        <Pressable onPress={() => signOut()} style={styles.logout_btn}>
           <HugeiconsIcon
             icon={Logout01FreeIcons}
             color={StateColors.danger}

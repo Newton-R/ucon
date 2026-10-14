@@ -1,8 +1,14 @@
 import { Colors, raduis, StateColors } from "@/constants/Colors";
+import { Timetable } from "@/constants/schema";
 import { TextSize } from "@/constants/Template";
+import { useClass } from "@/hooks/useClass";
+import { DateTimePicker } from "@expo/ui/community/datetime-picker";
 import { ArrowRight02FreeIcons } from "@hugeicons/core-free-icons";
+import { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import { format } from "date-fns";
 import { useState } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +19,8 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import SpinnerLoader from "../SpinnerLoader";
+import ThemedButton from "../themed/Button";
 import ThemedIcons from "../themed/ThemedIcons";
 import ThemedText from "../themed/ThemedText";
 
@@ -64,28 +72,73 @@ interface ClassData {
   room: string;
   subject: string;
   lecturer: string;
-  start_time: string;
-  end_time: string;
+  start_time: Date;
+  end_time: Date;
 }
 
-const ClassCreationForm = () => {
+const ClassCreationForm = ({ onSubmit }: { onSubmit: () => void }) => {
   const pills = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const colors = [
-    "#EF4444",
-    "#F59E0B",
-    "#10B981",
-    "#2563EB",
-    "#22D3EE",
-    "#8B5CF6",
+    "239, 68, 68",
+    "245, 158, 11",
+    "16, 185, 129",
+    "37, 99, 235",
+    "34, 211, 238",
+    "139, 92, 246",
   ];
   const [active, setActive] = useState(0);
-  const [classData, setClassData] = useState<ClassData>({
+  const [classData, setClassData] = useState<Timetable>({
     room: "",
-    subject: "",
+    course: "",
+    color: "",
+    day: 0,
+    reminder: true,
     lecturer: "",
-    start_time: "",
-    end_time: "",
+    start_time: new Date(),
+    end_time: new Date(),
   });
+  const { addClass } = useClass();
+  const [isLoading, setLoading] = useState<boolean>(false);
+  const [timerOpen, setTimerOpen] = useState<boolean>(false);
+  const [endTimerOpen, setEndTimerOpen] = useState<boolean>(false);
+
+  const SaveClass = async () => {
+    setLoading(true);
+
+    try {
+      await addClass({
+        color: classData.color,
+        course: classData.course,
+        end_time: classData.end_time,
+        day: classData.day,
+        lecturer: classData.lecturer,
+        reminder: classData.reminder,
+        room: classData.room,
+        start_time: classData.start_time,
+      });
+      onSubmit();
+    } catch (e) {
+      console.log({ error: e });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onChange = (
+    event: DateTimePickerEvent,
+    key: keyof ClassData,
+    selected?: Date,
+  ) => {
+    if (Platform.OS === "android") {
+      setEndTimerOpen(false);
+      setTimerOpen(false);
+    }
+
+    if (event.type === "set" && selected) {
+      setClassData((prev) => ({ ...prev, [key]: selected }));
+    }
+  };
+
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? "light"];
   return (
@@ -93,8 +146,8 @@ const ClassCreationForm = () => {
       <FormInput
         label="Subject name"
         placeHolder="e.g Algorithm"
-        value={classData.subject}
-        onTextChange={(e) => setClassData((prev) => ({ ...prev, subject: e }))}
+        value={classData.course}
+        onTextChange={(e) => setClassData((prev) => ({ ...prev, course: e }))}
       />
       <FormInput
         label="Lecturer"
@@ -122,7 +175,10 @@ const ClassCreationForm = () => {
         >
           {pills.map((label, i) => (
             <Pressable
-              onPress={() => setActive(i)}
+              onPress={() => {
+                setClassData((prev) => ({ ...prev, day: i + 1 }));
+                setActive(i);
+              }}
               key={i}
               style={[
                 styles.pill,
@@ -152,42 +208,125 @@ const ClassCreationForm = () => {
       <View style={styles.input_block}>
         <ThemedText style={styles.input_label}>Time</ThemedText>
         <View style={styles.time_flex}>
-          <FormInput
-            style={{ flex: 1 }}
-            placeHolder="Start time"
-            onTextChange={(e) =>
-              setClassData((prev) => ({ ...prev, start_time: e }))
-            }
-          />
+          <Pressable
+            onPress={() => setTimerOpen(true)}
+            style={[
+              styles.input,
+              {
+                justifyContent: "space-between",
+                borderColor: theme.border,
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: theme.background,
+              },
+            ]}
+          >
+            <ThemedText>{format(classData.start_time, "HH:mm")}</ThemedText>
+          </Pressable>
           <ThemedIcons icon={ArrowRight02FreeIcons} />
-          <FormInput
-            style={{ flex: 1 }}
-            placeHolder="End time"
-            onTextChange={(e) =>
-              setClassData((prev) => ({ ...prev, end_time: e }))
-            }
-          />
+          <Pressable
+            onPress={() => setEndTimerOpen(true)}
+            style={[
+              styles.input,
+              {
+                justifyContent: "space-between",
+                borderColor: theme.border,
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: theme.background,
+              },
+            ]}
+          >
+            <ThemedText>{format(classData.end_time, "HH:mm")}</ThemedText>
+          </Pressable>
+
+          {timerOpen && (
+            <DateTimePicker
+              value={classData.start_time as Date}
+              mode="time"
+              is24Hour={true}
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={(e, selected) => onChange(e, "start_time", selected)}
+            />
+          )}
+
+          {endTimerOpen && (
+            <DateTimePicker
+              value={classData.end_time as Date}
+              mode="time"
+              is24Hour={true}
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={(e, selected) => onChange(e, "end_time", selected)}
+            />
+          )}
         </View>
       </View>
       <View style={styles.input_block}>
         <ThemedText style={styles.input_label}>Color</ThemedText>
         <View style={styles.color_pallete_card}>
           {colors.map((col, i) => (
-            <View
-              style={[styles.color_pallete, { backgroundColor: col }]}
+            <Pressable
+              onPress={() => setClassData((prev) => ({ ...prev, color: col }))}
+              style={[
+                { borderRadius: 13 },
+                classData.color === col && styles.color_selected,
+              ]}
               key={i}
-            />
+            >
+              <View
+                style={[
+                  styles.color_pallete,
+                  { backgroundColor: `rgb(${col})` },
+                ]}
+              />
+            </Pressable>
           ))}
         </View>
       </View>
-      <View>
+      <View
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <ThemedText
           variant="primary"
           style={{ fontWeight: "500", fontSize: TextSize.lg }}
         >
           Set reminder
         </ThemedText>
+        <Pressable
+          onPress={() =>
+            setClassData((prev) => ({ ...prev, reminder: !classData.reminder }))
+          }
+          style={[
+            styles.toggle_btn,
+            { borderWidth: 2, borderColor: theme.border },
+            classData.reminder && {
+              alignItems: "flex-end",
+              backgroundColor: StateColors.text_accent,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.toggle_blob,
+              { backgroundColor: theme.text_primary },
+            ]}
+          />
+        </Pressable>
       </View>
+      <ThemedButton onPress={() => SaveClass()}>
+        {isLoading ? (
+          <SpinnerLoader />
+        ) : (
+          <Text style={{ color: "#fff" }}>Save</Text>
+        )}
+      </ThemedButton>
     </View>
   );
 };
@@ -209,7 +348,15 @@ const styles = StyleSheet.create({
   color_pallete: {
     width: 30,
     height: 30,
-    borderRadius: raduis.full,
+    borderRadius: 11,
+  },
+  input: {
+    paddingHorizontal: 16,
+    flex: 1,
+    borderWidth: 2,
+    borderRadius: raduis.md,
+
+    height: 50,
   },
   pill: {
     padding: 4,
@@ -233,5 +380,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     justifyContent: "space-between",
+  },
+  color_selected: {
+    padding: 2,
+    borderWidth: 2,
+    borderColor: StateColors.text_accent,
+  },
+  toggle_btn: {
+    width: 50,
+    height: 30,
+    borderRadius: raduis.full,
+    padding: 2,
+  },
+  toggle_blob: {
+    height: "100%",
+    width: 24,
+    backgroundColor: "#fff",
+    borderRadius: raduis.full,
   },
 });

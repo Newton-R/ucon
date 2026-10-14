@@ -1,22 +1,36 @@
 import { raduis } from "@/constants/Colors";
 import { TextSize } from "@/constants/Template";
+import { Class } from "@/constants/types";
 import { StyleSheet, View } from "react-native";
 import ThemedText from "./ThemedText";
 
-export default function CourseCard() {
+export default function CourseCard({ myclass }: { myclass: Class }) {
+  const timeFormat = (time: string) => {
+    const formated = time.split(":").splice(0, 2).join(":");
+    return formated;
+  };
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          borderLeftWidth: 12,
+          borderColor: `rgb(${myclass.color})`,
+          backgroundColor: `rgba(${myclass.color}, 0.1)`,
+        },
+      ]}
+    >
       <ThemedText variant="muted" style={{ fontSize: TextSize.md }}>
-        01:00 - 03:00
+        {timeFormat(myclass.start_time)} - {timeFormat(myclass.end_time)}
       </ThemedText>
       <ThemedText
         variant="primary"
         style={{ fontSize: TextSize.xl, fontWeight: "500" }}
       >
-        Mathematics
+        {myclass.course}
       </ThemedText>
       <ThemedText variant="secondary" style={{ fontSize: TextSize.md }}>
-        Room 101 - Prof M. Chami
+        {myclass.room} - {myclass.lecturer}
       </ThemedText>
     </View>
   );
@@ -30,9 +44,6 @@ const styles = StyleSheet.create({
     gap: 4,
     padding: 15,
     paddingLeft: 20,
-    borderLeftWidth: 12,
-    borderColor: "rgb(137, 56, 148)",
-    backgroundColor: "rgba(137, 56, 148, 0.1)",
     borderRadius: raduis.lg,
   },
 });
